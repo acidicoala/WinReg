@@ -89,6 +89,31 @@ class RegResult;
 template <typename T>
 class RegExpected;
 
+namespace detail{
+
+#if _MSC_VER < 1500 // MSVC version is less than Vista
+    inline LONG RegGetValueW(HKEY hkey,
+                         LPCWSTR lpSubKey,
+                         LPCWSTR lpValue,
+                         DWORD dwFlags,
+                         LPDWORD pdwType,
+                         PVOID pvData,
+                         LPDWORD pcbData)
+    {
+        HKEY hSubKey;
+        LONG lResult = RegOpenKeyW(hkey, lpSubKey, &hSubKey);
+        if (lResult != ERROR_SUCCESS)
+            return lResult;
+
+        lResult = RegQueryValueW(hSubKey, lpValue, (LPWSTR)pvData, (LPLONG)pcbData);
+        RegCloseKey(hSubKey);
+        return lResult;
+    }
+#else // Use native RegGetValueW
+    const auto& RegGetValueW = ::RegGetValueW;
+#endif
+
+}
 
 //
 // Class Declarations
@@ -1476,7 +1501,7 @@ inline DWORD RegKey::GetDwordValue(const std::wstring& valueName) const
     DWORD dataSize = sizeof(data);   // size of data, in bytes
 
     constexpr DWORD flags = RRF_RT_REG_DWORD;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr, // no subkey
         valueName.c_str(),
@@ -1502,7 +1527,7 @@ inline ULONGLONG RegKey::GetQwordValue(const std::wstring& valueName) const
     DWORD dataSize = sizeof(data);   // size of data, in bytes
 
     constexpr DWORD flags = RRF_RT_REG_QWORD;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr, // no subkey
         valueName.c_str(),
@@ -1527,7 +1552,7 @@ inline std::wstring RegKey::GetStringValue(const std::wstring& valueName) const
     // Get the size of the result string
     DWORD dataSize = 0; // size of data, in bytes
     constexpr DWORD flags = RRF_RT_REG_SZ;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1547,7 +1572,7 @@ inline std::wstring RegKey::GetStringValue(const std::wstring& valueName) const
     std::wstring result(dataSize / sizeof(wchar_t), L' ');
 
     // Call RegGetValue for the second time to read the string's content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1585,7 +1610,7 @@ inline std::wstring RegKey::GetExpandStringValue(
 
     // Get the size of the result string
     DWORD dataSize = 0; // size of data, in bytes
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1605,7 +1630,7 @@ inline std::wstring RegKey::GetExpandStringValue(
     std::wstring result(dataSize / sizeof(wchar_t), L' ');
 
     // Call RegGetValue for the second time to read the string's content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1633,7 +1658,7 @@ inline std::vector<std::wstring> RegKey::GetMultiStringValue(const std::wstring&
     // Request the size of the multi-string, in bytes
     DWORD dataSize = 0;
     constexpr DWORD flags = RRF_RT_REG_MULTI_SZ;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1654,7 +1679,7 @@ inline std::vector<std::wstring> RegKey::GetMultiStringValue(const std::wstring&
     std::vector<wchar_t> data(dataSize / sizeof(wchar_t), L' ');
 
     // Read the multi-string from the registry into the vector object
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1686,7 +1711,7 @@ inline std::vector<BYTE> RegKey::GetBinaryValue(const std::wstring& valueName) c
     // Get the size of the binary data
     DWORD dataSize = 0; // size of data, in bytes
     constexpr DWORD flags = RRF_RT_REG_BINARY;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1712,7 +1737,7 @@ inline std::vector<BYTE> RegKey::GetBinaryValue(const std::wstring& valueName) c
     }
 
     // Call RegGetValue for the second time to read the data content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1740,7 +1765,7 @@ inline RegExpected<DWORD> RegKey::TryGetDwordValue(const std::wstring& valueName
     DWORD dataSize = sizeof(data);   // size of data, in bytes
 
     constexpr DWORD flags = RRF_RT_REG_DWORD;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr, // no subkey
         valueName.c_str(),
@@ -1768,7 +1793,7 @@ inline RegExpected<ULONGLONG> RegKey::TryGetQwordValue(const std::wstring& value
     DWORD dataSize = sizeof(data);   // size of data, in bytes
 
     constexpr DWORD flags = RRF_RT_REG_QWORD;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr, // no subkey
         valueName.c_str(),
@@ -1795,7 +1820,7 @@ inline RegExpected<std::wstring> RegKey::TryGetStringValue(const std::wstring& v
     // Get the size of the result string
     DWORD dataSize = 0; // size of data, in bytes
     constexpr DWORD flags = RRF_RT_REG_SZ;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1815,7 +1840,7 @@ inline RegExpected<std::wstring> RegKey::TryGetStringValue(const std::wstring& v
     std::wstring result(dataSize / sizeof(wchar_t), L' ');
 
     // Call RegGetValue for the second time to read the string's content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,        // no subkey
         valueName.c_str(),
@@ -1855,7 +1880,7 @@ inline RegExpected<std::wstring> RegKey::TryGetExpandStringValue(
 
     // Get the size of the result string
     DWORD dataSize = 0; // size of data, in bytes
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1875,7 +1900,7 @@ inline RegExpected<std::wstring> RegKey::TryGetExpandStringValue(
     std::wstring result(dataSize / sizeof(wchar_t), L' ');
 
     // Call RegGetValue for the second time to read the string's content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,        // no subkey
         valueName.c_str(),
@@ -1906,7 +1931,7 @@ inline RegExpected<std::vector<std::wstring>>
     // Request the size of the multi-string, in bytes
     DWORD dataSize = 0;
     constexpr DWORD flags = RRF_RT_REG_MULTI_SZ;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1926,7 +1951,7 @@ inline RegExpected<std::vector<std::wstring>>
     std::vector<wchar_t> data(dataSize / sizeof(wchar_t), L' ');
 
     // Read the multi-string from the registry into the vector object
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1961,7 +1986,7 @@ inline RegExpected<std::vector<BYTE>>
     // Get the size of the binary data
     DWORD dataSize = 0; // size of data, in bytes
     constexpr DWORD flags = RRF_RT_REG_BINARY;
-    LSTATUS retCode = ::RegGetValueW(
+    LSTATUS retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),
@@ -1987,7 +2012,7 @@ inline RegExpected<std::vector<BYTE>>
     }
 
     // Call RegGetValue for the second time to read the data content
-    retCode = ::RegGetValueW(
+    retCode = detail::RegGetValueW(
         m_hKey,
         nullptr,    // no subkey
         valueName.c_str(),

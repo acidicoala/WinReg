@@ -22,3 +22,10 @@ install(
     TARGETS WinReg DESTINATION ${LIB_INSTALL_DIR}
     INCLUDES ${HEADERS} DESTINATION ${INCLUDE_INSTALL_DIR}
 )
+
+if(UNIT_TEST)
+    add_executable(UnitTest WinReg/WinRegTest.cpp)
+    target_link_libraries(UnitTest PRIVATE WinReg)
+
+    configure_file(${CMAKE_SOURCE_DIR}/WinReg/GioTest.reg ${CMAKE_CURRENT_BINARY_DIR}/GioTest.reg COPYONLY)
+endif()
